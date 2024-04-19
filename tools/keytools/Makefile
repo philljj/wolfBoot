@@ -17,7 +17,8 @@ LDFLAGS =
 OBJDIR = ./
 LIBS =
 
-ifeq ($(SIGN),LMS)
+#ifeq ($(SIGN),ext_LMS)
+ifneq (,$(filter $(SIGN), LMS ext_LMS))
   LMSDIR = $(WOLFBOOTDIR)/lib/hash-sigs
   LIBS += $(LMSDIR)/lib/hss_lib.a
   CFLAGS  +=-DWOLFBOOT_SIGN_LMS -DWOLFSSL_HAVE_LMS -DHAVE_LIBLMS -I$(LMSDIR)/src \
@@ -35,7 +36,7 @@ endif
 
 # Only needed if using 3rd party integration. This can be
 # removed when wc_lms and wc_xmss become default in wolfboot.
-ifneq (,$(filter $(SIGN), LMS XMSS))
+ifneq (,$(filter $(SIGN), LMS ext_LMS XMSS))
   CFLAGS  +=-DWOLFSSL_EXPERIMENTAL_SETTINGS
 endif
 

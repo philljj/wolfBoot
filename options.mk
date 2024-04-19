@@ -323,7 +323,7 @@ ifneq ($(findstring RSA4096,$(SIGN)),)
   endif
 endif
 
-ifeq ($(SIGN),LMS)
+ifneq (,$(filter $(SIGN), LMS ext_LMS))
   # For LMS the signature size is a function of the LMS parameters.
   # All five of these parms must be set in the LMS .config file:
   #   LMS_LEVELS, LMS_HEIGHT, LMS_WINTERNITZ, IMAGE_SIGNATURE_SIZE,
@@ -348,7 +348,30 @@ ifeq ($(SIGN),LMS)
   ifndef IMAGE_HEADER_SIZE
     $(error IMAGE_HEADER_SIZE not set)
   endif
+endif
 
+ifeq ($(SIGN),LMS)
+  KEYGEN_OPTIONS+=--lms
+  SIGN_OPTIONS+=--lms
+  WOLFCRYPT_OBJS+= \
+    ./lib/wolfssl/wolfcrypt/src/wc_lms.o \
+    ./lib/wolfssl/wolfcrypt/src/wc_lms_impl.o \
+    ./lib/wolfssl/wolfcrypt/src/memory.o \
+    ./lib/wolfssl/wolfcrypt/src/wc_port.o \
+    ./lib/wolfssl/wolfcrypt/src/hash.o
+  CFLAGS+=-D"WOLFBOOT_SIGN_LMS" -D"WOLFSSL_HAVE_LMS" -D"WOLFSSL_WC_LMS" \
+    -D"LMS_LEVELS=$(LMS_LEVELS)" -D"LMS_HEIGHT=$(LMS_HEIGHT)" \
+    -D"LMS_WINTERNITZ=$(LMS_WINTERNITZ)" -I$(LMSDIR)/src \
+    -D"IMAGE_SIGNATURE_SIZE"=$(IMAGE_SIGNATURE_SIZE) \
+    -D"WOLFSSL_LMS_VERIFY_ONLY"
+  ifeq ($(WOLFBOOT_SMALL_STACK),1)
+    $(error WOLFBOOT_SMALL_STACK with LMS not supported)
+  else
+    STACK_USAGE=18064
+  endif
+endif
+
+ifeq ($(SIGN),ext_LMS)
   LMSDIR = lib/hash-sigs
   KEYGEN_OPTIONS+=--lms
   SIGN_OPTIONS+=--lms
@@ -423,7 +446,7 @@ endif
 
 # Only needed if using 3rd party integration. This can be
 # removed when wc_lms and wc_xmss become default in wolfboot.
-ifneq (,$(filter $(SIGN), LMS XMSS))
+ifneq (,$(filter $(SIGN), ext_LMS XMSS))
   CFLAGS  +=-DWOLFSSL_EXPERIMENTAL_SETTINGS
 endif
 
@@ -747,4 +770,8 @@ endif
 
 ifeq ($(SIGN_ALG),)
   SIGN_ALG=$(SIGN)
+endif
+
+ifeq ($(SIGN_ALG),ext_LMS)
+  SIGN_ALG=LMS
 endif
