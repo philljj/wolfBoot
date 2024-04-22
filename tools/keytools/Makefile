@@ -17,13 +17,23 @@ LDFLAGS =
 OBJDIR = ./
 LIBS =
 
-#ifeq ($(SIGN),ext_LMS)
+
+# Common to wc_lms and ext_lms.
 ifneq (,$(filter $(SIGN), LMS ext_LMS))
-  LMSDIR = $(WOLFBOOTDIR)/lib/hash-sigs
-  LIBS += $(LMSDIR)/lib/hss_lib.a
-  CFLAGS  +=-DWOLFBOOT_SIGN_LMS -DWOLFSSL_HAVE_LMS -DHAVE_LIBLMS -I$(LMSDIR)/src \
+  CFLAGS  +=-DWOLFBOOT_SIGN_LMS -DWOLFSSL_HAVE_LMS \
             -D"LMS_LEVELS=$(LMS_LEVELS)" -D"LMS_HEIGHT=$(LMS_HEIGHT)" \
             -D"LMS_WINTERNITZ=$(LMS_WINTERNITZ)"
+endif
+
+# Specific to ext_lms.
+ifeq ($(SIGN),ext_LMS)
+  LMSDIR = $(WOLFBOOTDIR)/lib/hash-sigs
+  LIBS += $(LMSDIR)/lib/hss_lib.a
+  CFLAGS  +=-DHAVE_LIBLMS -I$(LMSDIR)/src
+endif
+
+ifeq ($(SIGN),LMS)
+  CFLAGS  +=-DWOLFSSL_WC_LMS
 endif
 
 ifeq ($(SIGN),XMSS)
@@ -36,7 +46,7 @@ endif
 
 # Only needed if using 3rd party integration. This can be
 # removed when wc_lms and wc_xmss become default in wolfboot.
-ifneq (,$(filter $(SIGN), LMS ext_LMS XMSS))
+ifneq (,$(filter $(SIGN), ext_LMS XMSS))
   CFLAGS  +=-DWOLFSSL_EXPERIMENTAL_SETTINGS
 endif
 
@@ -90,8 +100,17 @@ OBJS_REAL=\
 	$(WOLFDIR)/wolfcrypt/src/tfm.o \
 	$(WOLFDIR)/wolfcrypt/src/wc_port.o \
 	$(WOLFDIR)/wolfcrypt/src/wolfmath.o \
-	$(WOLFDIR)/wolfcrypt/src/ext_lms.o \
 	$(WOLFDIR)/wolfcrypt/src/ext_xmss.o
+
+ifeq ($(SIGN),ext_LMS)
+OBJS_REAL+= $(WOLFDIR)/wolfcrypt/src/ext_lms.o
+endif
+
+ifeq ($(SIGN),LMS)
+OBJS_REAL+=\
+	$(WOLFDIR)/wolfcrypt/src/wc_lms.o \
+	$(WOLFDIR)/wolfcrypt/src/wc_lms_impl.o
+endif
 
 OBJS_REAL+=\
 	$(WOLFBOOTDIR)/src/delta.o
